@@ -149,8 +149,9 @@ class Task:
     tasks = self.deps()
     n_tasks = len(tasks)
     for i, t in enumerate(tasks):
-      notification.notify("Executing task [%s] %s of %s" % (t, (i+1), n_tasks))
-      t.run()
+      if not t.complete():
+        notification.notify("Executing task [%s] %s of %s" % (t, (i+1), n_tasks))
+        t.run()
 
   @classmethod
   def cli(self):
@@ -218,7 +219,6 @@ def kahn_topsort(graph):
         Q.appendleft(v)
  
   if len(L) == len(graph):
-    L.reverse()
-    return L
+    return list(reversed(L))
   else:                                # if there is a cycle,  
     raise Exception("cycle detected.")
