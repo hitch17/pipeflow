@@ -1,4 +1,5 @@
 from collections import deque, OrderedDict
+import sys
 import os
 import os.path
 import datetime
@@ -151,6 +152,19 @@ class Task:
       notification.notify("Executing task [%s] %s of %s" % (t, (i+1), n_tasks))
       t.run()
 
+  @classmethod
+  def cli(self):
+    parser = OptionParser()
+    for name, param in self.task_parameters().items():
+      parser.add_option("--" + name, help=param.desc)
+    (options, args) = parser.parse_args()
+    try:
+      t = self(**vars(options))
+      t.execute()
+    except Exception as e:
+      parser.print_help()
+      sys.exit(0)
+
 def map_requirements(vs, fn):
   if vs is None:
     return None
@@ -208,21 +222,3 @@ def kahn_topsort(graph):
     return L
   else:                                # if there is a cycle,  
     raise Exception("cycle detected.")
-    # return                           # then return an empty list
-
-class Runner:
-  def cli(self, task):
-    print 
-    # parser = OptionParser()
-    # (options, args) = parser.parse_args()
-    # print options, args
-
-    # for param in task.params():
-    #   print param
-
-    # parser.add_option("-f", "--file", dest="filename",
-    #                   help="write report to FILE", metavar="FILE")
-    # parser.add_option("-q", "--quiet",
-    #                   action="store_false", dest="verbose", default=True,
-    #                   help="don't print status messages to stdout")
-

@@ -247,6 +247,5 @@ class TestTaskRunning(unittest.TestCase):
     TaskD().execute(QuietNotifier())
     self.assertEquals(TaskD().deps(), [])
 
-
 if __name__ == '__main__':
     unittest.main()

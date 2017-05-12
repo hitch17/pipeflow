@@ -3,10 +3,10 @@
 import pipeflow
 
 class TaskA(pipeflow.Task):
-  a = pipeflow.IntParam()
+  a = pipeflow.IntParam(desc="a number to put into the file")
 
   def requires(self):
-    return TaskB()
+    return TaskB(b=self.a+1)
 
   def output(self):
     return pipeflow.FileTarget("temp/world.txt")
@@ -19,13 +19,15 @@ class TaskA(pipeflow.Task):
 
 
 class TaskB(pipeflow.Task):
+  b = pipeflow.IntParam()
+
   def output(self):
     return pipeflow.FileTarget("temp/hello.txt")
 
   def run(self):
     print "Running TaskB"
     with self.output().open('w') as f:
-      f.write("hello")
+      f.write(str(self.b))
+      f.write(" hello")
 
-task = TaskA(a=5)
-task.execute()
+TaskA.cli()
