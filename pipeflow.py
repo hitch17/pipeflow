@@ -214,17 +214,17 @@ def kahn_topsort(graph):
     if in_degree[u] == 0:
       Q.appendleft(u)
  
-  L = []                               # list for order of nodes
+  L = deque()                               # list for order of nodes
    
   while Q:                
     u = Q.pop()                        # choose node of zero in-degree
-    L.append(u)                        # and 'remove' it from graph
+    L.appendleft(u)                        # and 'remove' it from graph
     for v in graph[u]:
       in_degree[v] -= 1
       if in_degree[v] == 0:
         Q.appendleft(v)
  
   if len(L) == len(graph):
-    return list(reversed(L))
+    return L
   else:                                # if there is a cycle,  
     raise Exception("cycle detected.")

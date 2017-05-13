@@ -129,7 +129,7 @@ class TestUtilityFunctions(unittest.TestCase):
     self.assertEquals([1,2,3,4,5,6,7], list(enumerate_values(OrderedDict(a=1, b=[2, OrderedDict(c=[[3]])], d=OrderedDict(e=4, f=(5, 6)), g=7))))
 
   def test_kahn_topsort(self):
-    self.assertEquals(kahn_topsort({}), [])
+    self.assertEquals(list(kahn_topsort({})), [])
     graph_tasks = { 
       "a" : ["b"],
       "b" : ["c", "d"],
@@ -137,7 +137,7 @@ class TestUtilityFunctions(unittest.TestCase):
       "d" : ["e"],
       "e" : [],
     }
-    self.assertEquals(kahn_topsort(graph_tasks), [
+    self.assertEquals(list(kahn_topsort(graph_tasks)), [
       "e",
       "d",
       "c",
@@ -241,7 +241,7 @@ class TestTaskRunning(unittest.TestCase):
     self.delete_temp_directory()
 
   def test_deps(self):
-    self.assertEquals(TaskD().deps(), [TaskC(), TaskD()])
+    self.assertEquals(list(TaskD().deps()), [TaskC(), TaskD()])
 
   def test_run_full(self):
     TaskD().execute(QuietNotifier())
@@ -249,11 +249,11 @@ class TestTaskRunning(unittest.TestCase):
     self.assertEquals(TaskD().output().read(), "hello, world.")
 
   def test_run_partial(self):
-    self.assertEquals(TaskD().deps(), [TaskC(), TaskD()])
+    self.assertEquals(list(TaskD().deps()), [TaskC(), TaskD()])
     TaskC().execute(QuietNotifier())
-    self.assertEquals(TaskD().deps(), [TaskD()])
+    self.assertEquals(list(TaskD().deps()), [TaskD()])
     TaskD().execute(QuietNotifier())
-    self.assertEquals(TaskD().deps(), [])
+    self.assertEquals(list(TaskD().deps()), [])
 
 if __name__ == '__main__':
     unittest.main()
