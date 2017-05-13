@@ -188,10 +188,9 @@ class TestTask(unittest.TestCase):
     task = TaskA(a=1, b=2)
     match = TaskA(a=1, b=2)
     notmatch = TaskA(a=0, b=0)
-    key = getattr(Task, '_key')
-    self.assertEquals((TaskA, 1, 2.0), key(task))
-    self.assertNotEquals((TaskA, 2, 1), key(task))
-    self.assertNotEquals((TaskB, 1, 2.0), key(task))
+    self.assertEquals((TaskA, 1, 2.0), task.task_key())
+    self.assertNotEquals((TaskA, 2, 1), task.task_key())
+    self.assertNotEquals((TaskB, 1, 2.0), task.task_key())
 
     self.assertTrue(task == match)
     self.assertEquals(task, match)

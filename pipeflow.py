@@ -109,14 +109,14 @@ class Task:
     return "%s(%s)" % (self.__class__.__name__, 
       ", ".join([ "%s=%s" % (name, self._args.get(name)) for name in self.task_parameters().keys() ]))
 
-  def _key(self):
+  def task_key(self):
     return tuple([self.__class__] + self._args.values())
 
   def __eq__(x, y):
-    return type(x) == type(y) and x._key() == y._key()
+    return type(x) == type(y) and x.task_key() == y.task_key()
 
   def __hash__(self):
-    return hash(self._key())
+    return hash(self.task_key())
 
   def requires(self):
     return None
@@ -184,20 +184,15 @@ def enumerate_values(vs):
   if vs is None:
     return
     yield
-  elif isinstance(vs, dict):
-    for el in vs.values():
-      if isinstance(el, Iterable):
-        for sub in enumerate_values(el):
-          yield sub
-      else:
-        yield el
   elif isinstance(vs, Iterable):
-    for el in vs:
-      if isinstance(el, Iterable):
-        for sub in enumerate_values(el):
+    if isinstance(vs, dict):
+      vs = vs.values()
+    for v in vs:
+      if isinstance(v, Iterable):
+        for sub in enumerate_values(v):
           yield sub
       else:
-        yield el
+        yield v
   else:
     yield vs
 
