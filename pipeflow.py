@@ -1,4 +1,4 @@
-from collections import deque, OrderedDict
+from collections import deque, OrderedDict, Iterable
 import sys
 import os
 import os.path
@@ -163,6 +163,8 @@ class Task:
       t = self(**vars(options))
       t.execute()
     except Exception as e:
+      import traceback
+      traceback.print_exc()
       parser.print_help()
       sys.exit(0)
 
@@ -180,15 +182,24 @@ def map_requirements(vs, fn):
 
 def enumerate_values(vs):
   if vs is None:
-    return []
+    return
+    yield
   elif isinstance(vs, dict):
-    return vs.values()
-  elif isinstance(vs, list):
-    return vs
-  elif isinstance(vs, tuple):
-    return list(vs)
+    for el in vs.values():
+      if isinstance(el, Iterable):
+        for sub in enumerate_values(el):
+          yield sub
+      else:
+        yield el
+  elif isinstance(vs, Iterable):
+    for el in vs:
+      if isinstance(el, Iterable):
+        for sub in enumerate_values(el):
+          yield sub
+      else:
+        yield el
   else:
-    return [vs]
+    yield vs
 
 class WrapperTask(Task):
   # borrowed from https://github.com/spotify/luigi/blob/master/luigi/task.py#L795

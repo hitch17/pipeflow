@@ -102,22 +102,31 @@ class TestUtilityFunctions(unittest.TestCase):
     self.assertEquals(1, map_requirements('1', int))
 
   def test_enumerate_values(self):
-    self.assertEquals([], enumerate_values(None))
+    self.assertEquals([], list(enumerate_values(None)))
 
-    self.assertEquals([], enumerate_values({}))
-    self.assertEquals([], enumerate_values([]))
-    self.assertEquals([], enumerate_values(()))
+    self.assertEquals([], list(enumerate_values({})))
+    self.assertEquals([], list(enumerate_values([])))
+    self.assertEquals([], list(enumerate_values(())))
 
-    self.assertEquals([1], enumerate_values({"a":1}))
-    self.assertEquals([1,2], enumerate_values(OrderedDict([("a",1),("b",2)])))
+    self.assertEquals([1], list(enumerate_values({"a":1})))
+    self.assertEquals([1,2], list(enumerate_values(OrderedDict([("a",1),("b",2)]))))
 
-    self.assertEquals([1], enumerate_values([1]))
-    self.assertEquals([1,2], enumerate_values([1,2]))
+    self.assertEquals([1], list(enumerate_values([1])))
+    self.assertEquals([1,2], list(enumerate_values([1,2])))
 
-    self.assertEquals([1], enumerate_values((1)))
-    self.assertEquals([1,2], enumerate_values((1,2)))
+    self.assertEquals([1], list(enumerate_values((1))))
+    self.assertEquals([1,2], list(enumerate_values((1,2))))
 
-    self.assertEquals([1], enumerate_values(1))
+    self.assertEquals([1], list(enumerate_values(1)))
+
+    self.assertEquals([1, 2], list(enumerate_values( [[[1, 2]]] )))
+    self.assertEquals([3, 4], list(enumerate_values( (((3, 4))) )))
+    self.assertEquals([5], list(enumerate_values( {"a":{"b":5}} )))
+    self.assertEquals([3], list(enumerate_values( {"a":{"b":{"c":3}}} )))
+
+    self.assertEquals([1,2,3,4,5,6,7], list(enumerate_values([[1], 2, [3, 4], [5, [6, [7]]]])))
+    self.assertEquals([1,2,3,4,5,6,7], list(enumerate_values(((1), 2, (3, 4), (5, (6, (7)))))))
+    self.assertEquals([1,2,3,4,5,6,7], list(enumerate_values(OrderedDict(a=1, b=[2, OrderedDict(c=[[3]])], d=OrderedDict(e=4, f=(5, 6)), g=7))))
 
   def test_kahn_topsort(self):
     self.assertEquals(kahn_topsort({}), [])
