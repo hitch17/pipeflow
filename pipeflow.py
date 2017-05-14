@@ -201,6 +201,86 @@ class WrapperTask(Task):
   def complete(self):
     return all(r.complete() for r in self.requires())
 
+class DependencyTree:
+  def __init__(self):
+    self.graph = {}
+    self.in_degree = {}
+    self.levels = {}
+
+  def get_level(self, n):
+    level_n = self.levels.get(n, set())
+    self.levels[n] = level_n
+    return level_n
+
+  def set_level(self, n, value):
+    self.remove_level(value)
+    self.get_level(n).add(value)
+    self.in_degree[value] = n
+
+  def remove_level(self, value):
+    degree = self.in_degree.get(value, 0)
+    self.get_level(degree).discard(value)
+    return degree
+
+  def inc_level(self, value):
+    degree = self.remove_level(value)
+    self.get_level(degree + 1).add(value)
+    self.in_degree[value] = degree + 1
+
+  def dec_level(self, value):
+    degree = self.remove_level(value)
+    self.get_level(degree - 1).add(value)
+    self.in_degree[value] = degree - 1
+
+  def add(self, value, reqs):
+    if value in self.graph:
+      raise Exception("%s is already in the graph" % value)
+
+    self.graph[value] = reqs
+
+    if self.in_degree.get(value, 0) == 0:
+      self.set_level(0, value)
+
+    for r in reqs:
+      self.inc_level(r)
+
+  def next(self):
+    if len(self.graph) == 0:
+      return
+
+    level_0 = self.get_level(0)
+    if len(level_0) == 0:
+      raise Exception("There is likely a cycle.")
+
+    next = level_0.pop()
+    next_rs = self.graph[next]
+    self.graph.pop(next)
+    for v in next_rs:
+      self.dec_level(v)
+
+    return next
+
+  def order(self):
+    v = self.next()
+    while v:
+      yield v
+      v = self.next()
+
+# ts = DependencyTree()
+# ts.add(1, [2, 3])
+# ts.add(2, [4])
+# ts.add(3, [4, 5])
+# ts.add(4, [5])
+# ts.add(5, [])
+# for i in ts.order():
+#   print i
+
+# ts = DependencyTree()
+# ts.add(1, [1])
+# for i in ts.order():
+#   print i
+
+
 def kahn_topsort(graph):
   # https://en.wikipedia.org/wiki/Topological_sorting
   # borrowed from  https://algocoding.wordpress.com/2015/04/05/topological-sorting-python/
@@ -212,7 +292,7 @@ def kahn_topsort(graph):
   Q = deque()                          # collect nodes with zero in-degree
   for u in in_degree:
     if in_degree[u] == 0:
-      Q.appendleft(u)
+      Q.append(u)
  
   L = deque()                               # list for order of nodes
    

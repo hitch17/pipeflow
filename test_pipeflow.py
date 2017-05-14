@@ -145,6 +145,24 @@ class TestUtilityFunctions(unittest.TestCase):
       "a",
     ])
 
+  def test_dependency_tree(self):
+    deps = DependencyTree()
+    deps.add("a", ["b"])
+    deps.add("b", ["c", "d"])
+    deps.add("c", [])
+    deps.add("d", ["e"])
+    deps.add("e", [])
+    print deps.graph
+    print deps.levels
+    self.assertEquals(list(deps.order()), [
+      "e",
+      "d",
+      "c",
+      "b",
+      "a",
+    ])
+
+
 class TaskA(Task):
   a = IntParam()
   b = FloatParam(default=2)

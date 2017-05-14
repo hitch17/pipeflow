@@ -30,4 +30,42 @@ class TaskB(pipeflow.Task):
       f.write(str(self.b))
       f.write(" hello")
 
-TaskA.cli()
+
+class TaskCatalog(pipeflow.Task):
+  n = pipeflow.IntParam()
+
+  def output(self):
+    return pipeflow.FileTarget("temp/catalog.txt")
+
+  def run(self):
+    print "Running TaskCatalog"
+    with self.output().open('w') as f:
+      f.write(",".join(map(str, xrange(0, self.n))))
+
+class TaskPrereq(pipeflow.Task):
+  n = pipeflow.IntParam()
+
+  def output(self):
+    return pipeflow.FileTarget("temp/%s.txt" % self.n)
+
+  def run(self):
+    print 'TaskPrereq', self.n
+    with self.output().open('w') as f:
+      f.write(str(self.n))
+
+class TaskMain(pipeflow.Task):
+  n = pipeflow.IntParam()
+
+  def requires(self):
+    catalog = yield TaskCatalog(n=self.n)
+    # catalog.run()
+    # items = catalog.output().read().split(',')
+    # return { x: TaskPrereq(n=x) for x in items }
+
+  def run(self):
+    print 'TaskMain', self.n
+
+TaskMain.cli()
+
+
+
