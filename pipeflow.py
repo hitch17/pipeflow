@@ -266,20 +266,6 @@ class DependencyTree:
       yield v
       v = self.next()
 
-# ts = DependencyTree()
-# ts.add(1, [2, 3])
-# ts.add(2, [4])
-# ts.add(3, [4, 5])
-# ts.add(4, [5])
-# ts.add(5, [])
-# for i in ts.order():
-#   print i
-
-# ts = DependencyTree()
-# ts.add(1, [1])
-# for i in ts.order():
-#   print i
-
 
 def kahn_topsort(graph):
   # https://en.wikipedia.org/wiki/Topological_sorting
