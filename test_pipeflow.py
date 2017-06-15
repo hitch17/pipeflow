@@ -145,24 +145,6 @@ class TestUtilityFunctions(unittest.TestCase):
       "a",
     ])
 
-  def test_dependency_tree(self):
-    deps = DependencyTree()
-    deps.add("a", ["b"])
-    deps.add("b", ["c", "d"])
-    deps.add("c", [])
-    deps.add("d", ["e"])
-    deps.add("e", [])
-    print deps.graph
-    print deps.levels
-    self.assertEquals(list(deps.order()), [
-      "e",
-      "d",
-      "c",
-      "b",
-      "a",
-    ])
-
-
 class TaskA(Task):
   a = IntParam()
   b = FloatParam(default=2)
@@ -272,6 +254,213 @@ class TestTaskRunning(unittest.TestCase):
     self.assertEquals(list(TaskD().deps()), [TaskD()])
     TaskD().execute(QuietNotifier())
     self.assertEquals(list(TaskD().deps()), [])
+
+class TestDependencyTree(unittest.TestCase):
+  def test_task_order(self):
+    d = DependencyTree(OrderedDict(
+      a=["b"],
+      b=["c", "d"],
+      c=[],
+      d=["e"],
+      e=[],
+    ))
+    self.assertEquals(list(d.order()), ["e", "d", "c", "b", "a"])
+  def test_find_identity_cycle(self):
+    with self.assertRaises(Exception):
+      DependencyTree(OrderedDict(a=["a"])).next()
+  def test_find_simple_cycle(self):
+    d = DependencyTree(OrderedDict(a=["b"]))
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True)]), 1: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 1, 'b': 0})
+    d.add("b", ["a"])
+    self.assertEquals(d.reverse, {'a': ['b'], 'b': ['a']})
+    self.assertEquals(d.location, {'a': 1, 'b': 1})
+    self.assertEquals(d.levels, {1: OrderedDict([('a', True), ('b', True)])})
+    with self.assertRaises(Exception):
+      d.next()
+  def test_a(self):
+    d = DependencyTree(dict(a=[]))
+    self.assertEquals(d.reverse, {'a': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 0})
+    self.assertEquals(list(d.peek_iter()), ['a'])
+  def test_a2b(self):
+    d = DependencyTree(dict(a=["b"]))
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True)]), 1: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 1, 'b': 0})
+    self.assertEquals(list(d.peek_iter()), ['b','a'])
+  def test_a2bc(self):
+    d = DependencyTree(dict(a=["b", "c"]))
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a'], 'c': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True), ('c', True)]), 2: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 2, 'b': 0, 'c': 0})
+    self.assertEquals(list(d.peek_iter()), ['c','b','a'])
+  def test_a2b2c(self):
+    d = DependencyTree(dict(a=["c"], c=["b"]))
+    self.assertEquals(d.reverse, {'a': [], 'c': ['a'], 'b': ['c']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True)]), 1: OrderedDict([('a', True), ('c', True)])})
+    self.assertEquals(d.location, {'a': 1, 'c': 1, 'b': 0})
+    self.assertEquals(list(d.peek_iter()), ['b','c','a'])
+  def test_incremental(self):
+    d = DependencyTree(dict(a=[]))
+    self.assertEquals(d.reverse, {'a': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 0})
+    self.assertEquals(list(d.peek_iter()), ['a'])
+
+    d.add('b', ['c'])
+    self.assertEquals(d.reverse, {'a': [], 'c': ['b'], 'b': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True), ('c', True)]), 1: OrderedDict([('b', True)])})
+    self.assertEquals(d.location, {'a': 0, 'c': 0, 'b': 1})
+    self.assertEquals(list(d.peek_iter()), ['c','b','a'])
+
+    d.add('d', ['a'])
+    self.assertEquals(d.reverse, {'a': ['d'], 'c': ['b'], 'b': [], 'd': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('c', True), ('a', True)]), 1: OrderedDict([('b', True), ('d', True)])})
+    self.assertEquals(d.location, {'a': 0, 'c': 0, 'b': 1, 'd': 1})
+    self.assertEquals(list(d.peek_iter()), ['a', 'd', 'c', 'b'])
+
+    d.add('c', ['a', 'e'])
+    self.assertEquals(d.reverse, {'a': ['d', 'c'], 'c': ['b'], 'b': [], 'e': ['c'], 'd': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True), ('e', True)]), 1: OrderedDict([('b', True), ('d', True)]), 2: OrderedDict([('c', True)])})
+    self.assertEquals(d.location, {'a': 0, 'c': 2, 'b': 1, 'e': 0, 'd': 1})
+    self.assertEquals(list(d.peek_iter()), ['e', 'a', 'c', 'b', 'd'])
+
+    self.assertEquals(d.next(), 'e')
+    self.assertEquals(d.reverse, {'a': ['d', 'c'], 'c': ['b'], 'b': [], 'd': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True)]), 1: OrderedDict([('b', True), ('d', True), ('c', True)])})
+    self.assertEquals(d.location, {'a': 0, 'c': 1, 'b': 1, 'd': 1})
+    self.assertEquals(list(d.peek_iter()), ['a', 'c', 'b', 'd'])
+
+    self.assertEquals(d.next(), 'a')
+    self.assertEquals(d.reverse, {'b': [], 'c': ['b'], 'd': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('d', True), ('c', True)]), 1: OrderedDict([('b', True)])})
+    self.assertEquals(d.location, {'c': 0, 'b': 1, 'd': 0})
+    self.assertEquals(list(d.peek_iter()), ['c', 'b', 'd'])
+
+    self.assertEquals(d.next(), 'c')
+    self.assertEquals(d.reverse, {'b': [], 'd': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('d', True), ('b', True)])})
+    self.assertEquals(d.location, {'b': 0, 'd': 0})
+    self.assertEquals(list(d.peek_iter()), ['b', 'd'])
+
+    d.add('f', ['d'])
+    self.assertEquals(d.reverse, {'b': [], 'd': ['f'], 'f': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True), ('d', True)]), 1: OrderedDict([('f', True)])})
+    self.assertEquals(d.location, {'b': 0, 'd': 0, 'f': 1})
+    self.assertEquals(list(d.peek_iter()), ['d', 'f', 'b'])
+
+    self.assertEquals(d.next(), 'd')
+    self.assertEquals(d.reverse, {'b': [], 'f': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True), ('f', True)])})
+    self.assertEquals(d.location, {'b': 0, 'f': 0})
+    self.assertEquals(list(d.peek_iter()), ['f', 'b'])
+
+    self.assertEquals(d.next(), 'f')
+    self.assertEquals(d.reverse, {'b': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True)])})
+    self.assertEquals(d.location, {'b': 0})
+    self.assertEquals(list(d.peek_iter()), ['b'])
+
+    self.assertEquals(d.next(), 'b')
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {})
+    self.assertEquals(d.location, {})
+    self.assertEquals(list(d.peek_iter()), [])
+  def test_levels(self):
+    d = DependencyTree()
+    d.set_level(1, 'a')
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {1: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 1})
+    self.assertEquals(d.get_level(1), OrderedDict([('a', True)]))
+    d.set_level(3, 'a')
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {3: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 3})
+    self.assertEquals(d.get_level(3), OrderedDict([('a', True)]))
+    d.inc_level('a', 2)
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {5: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 5})
+    self.assertEquals(d.get_level(5), OrderedDict([('a', True)]))
+    d.dec_level('a', 3)
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {2: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 2})
+    self.assertEquals(d.get_level(2), OrderedDict([('a', True)]))
+    d.remove_level('a')
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {})
+    self.assertEquals(d.location, {})
+  def test_add_edge_1(self):
+    d = DependencyTree()
+    d.add_edge('a')
+    self.assertEquals(d.reverse, {'a': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 0})
+    self.assertEquals(list(d.peek_iter()), ['a'])
+  def test_add_edge_2(self):
+    d = DependencyTree()
+    d.add_edge('a', 'b')
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True)]), 1: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 1, 'b': 0})
+    self.assertEquals(list(d.peek_iter()), ['b','a'])
+  def test_add_edge_3(self):
+    d = DependencyTree()
+    d.add_edge('a', 'b')
+    d.add_edge('a', 'c')
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a'], 'c': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True), ('c', True)]), 2: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 2, 'b': 0, 'c': 0})
+    self.assertEquals(list(d.peek_iter()), ['c','b','a'])
+  def test_add_1(self):
+    d = DependencyTree()
+    d.add('a', [])
+    self.assertEquals(d.reverse, {'a': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 0})
+    self.assertEquals(list(d.peek_iter()), ['a'])
+  def test_add_2(self):
+    d = DependencyTree()
+    d.add('a', ['b'])
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True)]), 1: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 1, 'b': 0})
+    self.assertEquals(list(d.peek_iter()), ['b','a'])
+  def test_add_3(self):
+    d = DependencyTree()
+    d.add('a', ['b','c'])
+    self.assertEquals(d.reverse, {'a': [], 'b': ['a'], 'c': ['a']})
+    self.assertEquals(d.levels, {0: OrderedDict([('b', True), ('c', True)]), 2: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 2, 'b': 0, 'c': 0})
+    self.assertEquals(list(d.peek_iter()), ['c','b','a'])
+  def test_remove_1(self):
+    d = DependencyTree(dict(a=[]))
+    d.remove_node('a')
+    self.assertEquals(d.reverse, {})
+    self.assertEquals(d.levels, {})
+    self.assertEquals(d.location, {})
+    self.assertEquals(list(d.peek_iter()), [])
+  def test_remove_2b(self):
+    d = DependencyTree(dict(a=['b']))
+    d.remove_node('b')
+    self.assertEquals(d.reverse, {'a': []})
+    self.assertEquals(d.levels, {0: OrderedDict([('a', True)])})
+    self.assertEquals(d.location, {'a': 0})
+    self.assertEquals(list(d.peek_iter()), ['a'])
+  def test_remove_2a(self):
+    d = DependencyTree(dict(a=['b']))
+    d.remove_node('a')
+    self.assertEquals(list(d.peek_iter()), ['b'])
+  def test_remove_2a_cycle(self):
+    d = DependencyTree(dict(a=['b'], b=['a']))
+    d.remove_node('a')
+    self.assertEquals(list(d.peek_iter()), ['b'])
+
 
 if __name__ == '__main__':
     unittest.main()

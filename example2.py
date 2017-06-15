@@ -41,13 +41,13 @@ class Task3(pipeflow.Task):
     results[self.task_key()] = True
 
 
-def xyz():
-  x = (yield 0)
-  print 'inside', x
-  x = x or 0
-  yield (x + 1)
+# def xyz():
+#   x = (yield 0)
+#   print 'inside', x
+#   x = x or 0
+#   yield (x + 1)
 
-gen = xyz()
-for y in gen:
-  print y
-  print gen.send(y+1)
+# gen = xyz()
+# for y in gen:
+#   print y
+#   print gen.send(y+1)

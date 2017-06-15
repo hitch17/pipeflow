@@ -4,6 +4,7 @@ import os
 import os.path
 import datetime
 import csv
+import copy
 from optparse import OptionParser
 
 class Param:
@@ -202,62 +203,76 @@ class WrapperTask(Task):
     return all(r.complete() for r in self.requires())
 
 class DependencyTree:
-  def __init__(self):
-    self.graph = {}
-    self.in_degree = {}
+  def __init__(self, graph=None):
+    self.reverse = {}
+    self.location = {}
     self.levels = {}
+    if graph:
+      self.expand(graph)
 
   def get_level(self, n):
-    level_n = self.levels.get(n, set())
+    level_n = self.levels.get(n, OrderedDict())
     self.levels[n] = level_n
     return level_n
 
   def set_level(self, n, value):
     self.remove_level(value)
-    self.get_level(n).add(value)
-    self.in_degree[value] = n
+    self.get_level(n)[value] = True
+    self.location[value] = n
 
   def remove_level(self, value):
-    degree = self.in_degree.get(value, 0)
-    self.get_level(degree).discard(value)
+    degree = self.location.pop(value, 0)
+    level = self.get_level(degree)
+    level.pop(value, None)
+    if len(level) == 0:
+      self.levels.pop(degree, None)
     return degree
 
-  def inc_level(self, value):
+  def inc_level(self, value, inc=1):
     degree = self.remove_level(value)
-    self.get_level(degree + 1).add(value)
-    self.in_degree[value] = degree + 1
+    self.get_level(degree + inc)[value] = True
+    self.location[value] = degree + inc
 
-  def dec_level(self, value):
+  def dec_level(self, value, dec=1):
     degree = self.remove_level(value)
-    self.get_level(degree - 1).add(value)
-    self.in_degree[value] = degree - 1
+    self.get_level(degree - dec)[value] = True
+    self.location[value] = degree - dec
 
-  def add(self, value, reqs):
-    if value in self.graph:
-      raise Exception("%s is already in the graph" % value)
+  def expand(self, graph):
+    for k, v in graph.items():
+      self.add(k, v)
 
-    self.graph[value] = reqs
+  def add_edge(self, start, end=None):
+    self.reverse[start] = self.reverse.get(start, list())
+    self.inc_level(start, 0)
+    if end:
+      self.add_edge(end)
+      self.reverse[end].append(start)
+      self.inc_level(start)
 
-    if self.in_degree.get(value, 0) == 0:
-      self.set_level(0, value)
+  def add(self, start, ends):
+    if ends:
+      for e in ends:
+        self.add_edge(start, e)
+    else:
+      self.add_edge(start)
 
-    for r in reqs:
-      self.inc_level(r)
+  def remove_node(self, node):
+    for v in self.reverse.get(node, []):
+      self.dec_level(v)
+    self.remove_level(node)
+    self.reverse.pop(node, None)
 
   def next(self):
-    if len(self.graph) == 0:
-      return
+    if len(self.reverse) == 0:
+      raise StopIteration
 
     level_0 = self.get_level(0)
     if len(level_0) == 0:
-      raise Exception("There is likely a cycle.")
+      raise Exception("Cycle detected")
 
-    next = level_0.pop()
-    next_rs = self.graph[next]
-    self.graph.pop(next)
-    for v in next_rs:
-      self.dec_level(v)
-
+    next = level_0.popitem()[0]
+    self.remove_node(next)
     return next
 
   def order(self):
@@ -266,6 +281,12 @@ class DependencyTree:
       yield v
       v = self.next()
 
+  def peek_iter(self):
+    d = DependencyTree()
+    d.reverse = copy.deepcopy(self.reverse)
+    d.location = copy.deepcopy(self.location)
+    d.levels = copy.deepcopy(self.levels)
+    return d.order()
 
 def kahn_topsort(graph):
   # https://en.wikipedia.org/wiki/Topological_sorting
