@@ -6,5 +6,5 @@ test:
 push-to-pypitest:
 	python setup.py sdist upload -r pypitest
 
-puth-to-pypi:
+push-to-pypi:
 	python setup.py sdist upload -r pypi
