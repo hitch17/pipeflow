@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'pipeflow',
   packages = ['pipeflow'],
-  version = '0.2,
+  version = '0.2',
   description = 'A clone of Spotify\'s Luigi library with less features and intended for workflows on a single machine.',
   author = 'John Hitchings',
   author_email = 'john@wealthfront.com',
