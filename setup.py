@@ -2,12 +2,12 @@ from distutils.core import setup
 setup(
   name = 'pipeflow',
   packages = ['pipeflow'],
-  version = '0.1',
+  version = '0.2,
   description = 'A clone of Spotify\'s Luigi library with less features and intended for workflows on a single machine.',
   author = 'John Hitchings',
   author_email = 'john@wealthfront.com',
   url = 'https://github.com/hitch17/pipeflow',
-  download_url = 'https://github.com/hitch17/pipeflow/archive/0.1.tar.gz',
+  download_url = 'https://github.com/hitch17/pipeflow/archive/0.2.tar.gz',
   keywords = ['python', 'workflow'],
   classifiers = [],
 )
