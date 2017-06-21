@@ -144,7 +144,7 @@ class Task:
       rs = filter(lambda r: not r.complete(), enumerate_values(t.requires()))
       graph[t] = rs
       queue.extend([ r for r in rs if r not in graph ])
-    return kahn_topsort(graph)
+    return topsort(graph)
 
   def execute(self, notification=QuietNotifier()):
     tasks = self.deps()
@@ -288,30 +288,5 @@ class DependencyTree:
     d.levels = copy.deepcopy(self.levels)
     return d.order()
 
-def kahn_topsort(graph):
-  # https://en.wikipedia.org/wiki/Topological_sorting
-  # borrowed from  https://algocoding.wordpress.com/2015/04/05/topological-sorting-python/
-  in_degree = { u : 0 for u in graph } # determine in-degree 
-  for u in graph:                      # of each node
-    for v in graph[u]:
-      in_degree[v] += 1
- 
-  Q = deque()                          # collect nodes with zero in-degree
-  for u in in_degree:
-    if in_degree[u] == 0:
-      Q.append(u)
- 
-  L = deque()                               # list for order of nodes
-   
-  while Q:                
-    u = Q.pop()                        # choose node of zero in-degree
-    L.appendleft(u)                        # and 'remove' it from graph
-    for v in graph[u]:
-      in_degree[v] -= 1
-      if in_degree[v] == 0:
-        Q.appendleft(v)
- 
-  if len(L) == len(graph):
-    return L
-  else:                                # if there is a cycle,  
-    raise Exception("cycle detected.")
+def topsort(graph):
+  return list(DependencyTree(graph).order())

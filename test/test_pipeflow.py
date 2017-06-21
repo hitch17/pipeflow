@@ -128,8 +128,8 @@ class TestUtilityFunctions(unittest.TestCase):
     self.assertEquals([1,2,3,4,5,6,7], list(enumerate_values(((1), 2, (3, 4), (5, (6, (7)))))))
     self.assertEquals([1,2,3,4,5,6,7], list(enumerate_values(OrderedDict(a=1, b=[2, OrderedDict(c=[[3]])], d=OrderedDict(e=4, f=(5, 6)), g=7))))
 
-  def test_kahn_topsort(self):
-    self.assertEquals(list(kahn_topsort({})), [])
+  def test_topsort(self):
+    self.assertEquals(list(topsort({})), [])
     graph_tasks = { 
       "a" : ["b"],
       "b" : ["c", "d"],
@@ -137,7 +137,7 @@ class TestUtilityFunctions(unittest.TestCase):
       "d" : ["e"],
       "e" : [],
     }
-    self.assertEquals(list(kahn_topsort(graph_tasks)), [
+    self.assertEquals(list(topsort(graph_tasks)), [
       "e",
       "d",
       "c",
