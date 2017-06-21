@@ -1,2 +1,4 @@
-pipeflow.pyc
+*.pyc
 temp/
+dist/
+MANIFEST
