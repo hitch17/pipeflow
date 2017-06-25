@@ -80,10 +80,14 @@ class FileTarget(Target):
 class CsvFileTarget(FileTarget):
   def __init__(self, filename, columns):
     super(CsvFileTarget, self).__init__(filename)
-    if type(columns) == list:
-      self.columns = OrderedDict.fromkeys(columns)
-    else:
-      self.columns = OrderedDict(columns)
+    self.columns = OrderedDict()
+    for c in columns:
+      if type(c) == tuple and len(c) == 2:
+        self.columns[c[0]] = c[1]
+      elif isinstance(c, basestring):
+        self.columns[c] = None
+      else:
+        raise Exception("column should either be a name or tuple of (name, type constructor)")
   def read_csv(self):
     for row in super(CsvFileTarget, self).read_csv():
       for k, func in self.columns.items():

@@ -58,10 +58,10 @@ class TestFileTarget(unittest.TestCase):
   directory = os.path.join(tempfile.gettempdir(), 'pipeflow')
   filepath = os.path.join(directory, 'test.csv')
   target = FileTarget(filepath)
-  csv_target = CsvFileTarget(filepath, columns=OrderedDict([
-    ('hello', None),
+  csv_target = CsvFileTarget(filepath, columns=[
+    'hello',
     ('world', int),
-  ]))
+  ])
 
   def delete_temp_directory(self):
     if os.path.exists(self.directory):
