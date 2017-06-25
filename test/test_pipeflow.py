@@ -2,6 +2,7 @@ import unittest
 from pipeflow import *
 import datetime
 import tempfile
+import os
 import os.path
 import shutil
 from collections import OrderedDict
@@ -57,6 +58,10 @@ class TestFileTarget(unittest.TestCase):
   directory = os.path.join(tempfile.gettempdir(), 'pipeflow')
   filepath = os.path.join(directory, 'test.csv')
   target = FileTarget(filepath)
+  csv_target = CsvFileTarget(filepath, columns=OrderedDict([
+    ('hello', None),
+    ('world', int),
+  ]))
 
   def delete_temp_directory(self):
     if os.path.exists(self.directory):
@@ -75,15 +80,19 @@ class TestFileTarget(unittest.TestCase):
 
   def test_exists_open_read(self):
     self.assertFalse(self.target.exists())
-    with self.target.open('w') as f:
-      f.write("hello,world\n1,2")
-    self.assertEquals(self.target.read(), "hello,world\n1,2")
+    self.csv_target.write_csv([{"hello":"1","world":2}])
+    self.assertEquals(self.target.read(), "hello,world\n1,2\n")
     self.assertTrue(self.target.exists())
 
   def test_read_csv(self):
-    with self.target.open('w') as f:
-      f.write("hello,world\n1,2")
-    self.assertEquals([{"hello":"1","world":"2"}], self.target.read_csv())
+    self.csv_target.write_csv([{"hello":"1","world":2}])
+    self.assertEquals([{"hello":"1","world":2}], list(self.csv_target.read_csv()))
+    self.assertEquals([{"hello":"1","world":"2"}], list(self.target.read_csv()))
+
+  def test_column_assignment(self):
+    target = CsvFileTarget(None, columns=['hello', 'world'])
+    self.assertEquals(OrderedDict([('hello', None),('world', None)]), target.columns)
+
 
 class TestUtilityFunctions(unittest.TestCase):
 

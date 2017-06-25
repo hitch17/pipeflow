@@ -7,7 +7,7 @@ import csv
 import copy
 from optparse import OptionParser
 
-class Param:
+class Param(object):
   def __init__(self, default=None, optional=False, desc=None):
     self.default = default
     self.optional = optional
@@ -44,7 +44,7 @@ class DateParam(Param):
     else:
       return datetime.datetime.strptime(v, "%Y-%m-%d").date()
 
-class Target:
+class Target(object):
   def exists(self):
     return False
   def open(self, mode='r', makedirs=True):
@@ -73,17 +73,42 @@ class FileTarget(Target):
       return f.read()
   def read_csv(self):
     with self.open() as f:
-      return list(csv.DictReader(f))
+      csv_in = csv.DictReader(f)
+      for row in csv_in:
+        yield row
 
-class ConsoleNotifier:
+class CsvFileTarget(FileTarget):
+  def __init__(self, filename, columns):
+    super(CsvFileTarget, self).__init__(filename)
+    if type(columns) == list:
+      self.columns = OrderedDict.fromkeys(columns)
+    else:
+      self.columns = OrderedDict(columns)
+  def read_csv(self):
+    for row in super(CsvFileTarget, self).read_csv():
+      for k, func in self.columns.items():
+        if func and k in row:
+          row[k] = func(row[k])
+      yield row
+  def write_csv(self, rows):
+    with self.open('w') as f:
+      csv_out = csv.DictWriter(f,
+        fieldnames=self.columns.keys(),
+        extrasaction='ignore',
+        lineterminator=os.linesep)
+      csv_out.writeheader()
+      csv_out.writerows(rows)
+
+
+class ConsoleNotifier(object):
   def notify(self, msg):
     print msg
 
-class QuietNotifier:
+class QuietNotifier(object):
   def notify(self, msg):
     pass
 
-class Task:
+class Task(object):
   def __init__(self, **kvargs):
     self._args = OrderedDict()
     for name, param in self.__class__.task_parameters().items():
@@ -202,7 +227,7 @@ class WrapperTask(Task):
   def complete(self):
     return all(r.complete() for r in self.requires())
 
-class DependencyTree:
+class DependencyTree(object):
   def __init__(self, graph=None):
     self.reverse = {}
     self.location = {}
