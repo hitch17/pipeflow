@@ -1,4 +1,5 @@
-from collections import deque, OrderedDict, Iterable
+from collections import deque, OrderedDict
+from collections.abc import Iterable
 import sys
 import os
 import os.path
@@ -55,7 +56,7 @@ class FileTarget(Target):
     self.filename = filename
   def exists(self):
     return os.path.exists(self.filename)
-  def makedirs(self, mode=0777):
+  def makedirs(self, mode=0o0777):
     # borrowed from https://github.com/spotify/luigi/blob/master/luigi/local_target.py#L141
     normpath = os.path.normpath(self.filename)
     parentfolder = os.path.dirname(normpath)
@@ -67,7 +68,7 @@ class FileTarget(Target):
   def open(self, mode='r', makedirs=True):
     if makedirs:
       self.makedirs()
-    return file(self.filename, mode)
+    return open(self.filename, mode)
   def read(self):
     with self.open() as f:
       return f.read()
@@ -84,7 +85,7 @@ class CsvFileTarget(FileTarget):
     for c in columns:
       if type(c) == tuple and len(c) == 2:
         self.columns[c[0]] = c[1]
-      elif isinstance(c, basestring):
+      elif isinstance(c, str):
         self.columns[c] = None
       else:
         raise Exception("column should either be a name or tuple of (name, type constructor)")
@@ -106,7 +107,7 @@ class CsvFileTarget(FileTarget):
 
 class ConsoleNotifier(object):
   def notify(self, msg):
-    print msg
+    print(msg)
 
 class QuietNotifier(object):
   def notify(self, msg):
@@ -140,7 +141,7 @@ class Task(object):
       ", ".join([ "%s=%s" % (name, self._args.get(name)) for name in self.task_parameters().keys() ]))
 
   def task_key(self):
-    return tuple([self.__class__] + self._args.values())
+    return tuple([self.__class__] + list(self._args.values()))
 
   def __eq__(x, y):
     return type(x) == type(y) and x.task_key() == y.task_key()
@@ -170,18 +171,21 @@ class Task(object):
     queue = deque([self])
     while queue:
       t = queue.pop()
-      rs = filter(lambda r: not r.complete(), enumerate_values(t.requires()))
+      rs = list(filter(lambda r: not r.complete(), enumerate_values(t.requires())))
       graph[t] = rs
       queue.extend([ r for r in rs if r not in graph ])
-    return topsort(graph)
+    return topsort(graph)[:-1]
 
   def execute(self, notification=QuietNotifier()):
-    tasks = self.deps()
+    tasks = list(self.deps())
+    tasks.append(self)
     n_tasks = len(tasks)
     for i, t in enumerate(tasks):
       if not t.complete():
         notification.notify("Executing task [%s] %s of %s" % (t, (i+1), n_tasks))
         t.run()
+      else:
+        notification.notify("Skipping complete task [%s] %s of %s" % (t, (i+1), n_tasks))
 
   @classmethod
   def cli(self):
@@ -204,7 +208,7 @@ def map_requirements(vs, fn):
   elif isinstance(vs, dict):
     return { k: fn(v) for k, v in vs.items() }
   elif isinstance(vs, list):
-    return map(fn, vs)
+    return list(map(fn, vs))
   elif isinstance(vs, tuple):
     return tuple(map(fn, vs))
   else:
@@ -294,7 +298,7 @@ class DependencyTree(object):
 
   def next(self):
     if len(self.reverse) == 0:
-      raise StopIteration
+      return None
 
     level_0 = self.get_level(0)
     if len(level_0) == 0:
